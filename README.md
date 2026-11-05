@@ -56,13 +56,13 @@ node preview.cjs
 
 В `mobile` находятся код приложения и зависимости. Для Android нужны Flutter SDK, Android SDK и эмулятор или телефон. Для iOS нужны macOS и Xcode.
 
-1. В папке `mobile` выполните `flutter create --platforms=android,ios --empty --no-pub --project-name=students_lab --org=org.studentlab .` без флага `--overwrite`. Сохраните поставляемые `lib/main.dart` и `pubspec.yaml`, затем выполните `flutter pub get`.
-2. В Firebase зарегистрируйте Android App с package name `org.studentlab.students_lab` или фактическим ID из Gradle. Добавьте SHA-1/SHA-256 своего сертификата для Google. Скачайте актуальный `google-services.json` в `android/app/` и подключите Google Services Gradle plugin. Можно использовать `flutterfire configure` для привязки приложения, используя нативные файлы конфигурации. Для iOS зарегистрируйте Bundle ID, добавьте `GoogleService-Info.plist` в цель Runner и схему `REVERSED_CLIENT_ID` для Google. При необходимости настройте Sign in with Apple capability в Xcode.
-3. Перенесите фрагменты из `android-intents.xml` в указанные места `android/app/src/main/AndroidManifest.xml`. Для iOS зарегистрируйте `studentslab` в URL Types и установите `FlutterDeepLinkingEnabled` в false, чтобы Supabase обработал возврат. Для мобильных OAuth-приложений используйте те же backend callbacks провайдеров, что и в веб-настройке.
+1. Выполните `flutter pub get` из папки `mobile`. Проекты Android и iOS уже находятся в репозитории.
+2. Для Firebase зарегистрируйте Android App с package name `org.studentlab.students_lab`, добавьте SHA-1/SHA-256 сертификата сборки и положите `google-services.json` в `mobile/android/app/`. Gradle подключит Google Services, когда файл присутствует. Для iOS зарегистрируйте Bundle ID `org.studentlab.studentsLab`, добавьте `GoogleService-Info.plist` в цель Runner и внесите значение `REVERSED_CLIENT_ID` в URL Types для Google. Для входа через Apple настройте Sign in with Apple capability в Xcode.
+3. Добавьте `studentslab://auth` в **Supabase → Authentication → URL Configuration → Redirect URLs**. Этот адрес уже внесён в конфигурацию Android и iOS.
 4. Запустите с публичной конфигурацией проекта. Параметр `GOOGLE_SERVER_CLIENT_ID` содержит Web OAuth Client ID Google, если он не подхватывается из платформенной конфигурации. Параметр `OAUTH_URL` нужен для Яндекса и VK.
 
 ```powershell
-flutter run --dart-define=SUPABASE_URL=https://PROJECT.supabase.co --dart-define=SUPABASE_KEY=sb_publishable_REPLACE --dart-define=FIREBASE_DATABASE_URL=https://PROJECT-default-rtdb.firebaseio.com --dart-define=GOOGLE_SERVER_CLIENT_ID=REPLACE.apps.googleusercontent.com --dart-define=OAUTH_URL=https://oauth.example.com
+flutter run --dart-define=SUPABASE_URL=https://PROJECT.supabase.co --dart-define=SUPABASE_KEY=sb_publishable_REPLACE --dart-define=FIREBASE_DATABASE_URL=https://studyflutter-6a402-default-rtdb.europe-west1.firebasedatabase.app --dart-define=GOOGLE_SERVER_CLIENT_ID=REPLACE.apps.googleusercontent.com --dart-define=OAUTH_URL=https://oauth.example.com
 ```
 
 [Flutter и Firebase](https://firebase.google.com/docs/flutter/setup) · [Вход через провайдеров во Flutter](https://firebase.google.com/docs/auth/flutter/federated-auth) · [Глубокие ссылки Supabase](https://supabase.com/docs/guides/auth/native-mobile-deep-linking)

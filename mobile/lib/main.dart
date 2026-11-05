@@ -21,7 +21,7 @@ const googleClient = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
-    await sb.Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+    await sb.Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
   }
   if (databaseUrl.isNotEmpty) await Firebase.initializeApp();
   runApp(const MaterialApp(home: StudentsPage(), debugShowCheckedModeBanner: false));
