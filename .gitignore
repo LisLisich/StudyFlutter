@@ -1,0 +1,7 @@
+node_modules/
+.env
+*service-account*.json
+.dart_tool/
+build/
+google-services.json
+GoogleService-Info.plist
