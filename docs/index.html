@@ -48,7 +48,7 @@ li { margin-bottom:8px; overflow-wrap:anywhere }
 <button data-provider="yandex">Яндекс ID</button>
 <button data-provider="vk">VK ID</button>
 </div>
-<div id="account" class="row" hidden><strong id="username"></strong><button id="logout">Выйти</button></div>
+<div id="account" class="row" hidden><strong id="username"></strong><button id="link-github" hidden>Привязать GitHub</button><button id="logout">Выйти</button></div>
 <p id="status" role="status"></p>
 </section>
 <section id="students" hidden>
@@ -171,11 +171,20 @@ async function makeFirebase() {
     snapshot.forEach(child => { list.push(child.val()); });
     return list.reverse();
   };
+  const profile = u => u ? {
+    id: u.uid,
+    name: u.displayName || u.providerData.find(p => p.displayName)?.displayName || u.email || 'Пользователь',
+    githubLinked: u.providerData.some(p => p.providerId === 'github.com'),
+  } : null;
   return {
     observe(fn,reject) {
-      return auth.onAuthStateChanged(session,u => {
-        fn(u ? {id:u.uid,name:u.displayName || u.providerData.find(p => p.displayName)?.displayName || u.email || 'Пользователь'} : null);
-      },reject);
+      return auth.onIdTokenChanged(session,u => fn(profile(u)),reject);
+    },
+    async linkGithub() {
+      const current = session.currentUser;
+      if (!current) throw new Error('Сначала войдите в Firebase.');
+      const {user} = await auth.linkWithPopup(current,new auth.GithubAuthProvider());
+      return profile(user);
     },
     async login(provider) {
       const options = {
@@ -220,7 +229,9 @@ async function read() {
 }
 
 function showUser(next) {
+  $('link-github').hidden = !adapter?.linkGithub || !next || next.githubLinked;
   if (next && user && next.id && next.id === user.id) {
+    user = next;
     $('username').textContent = next.name;
     return;
   }
@@ -315,8 +326,29 @@ $('login').onclick = async event => {
     } else {
       if (!adapter) throw new Error('Сначала настройте подключение к базе.');
       await adapter.login(provider);
+      if (adapter?.linkGithub) $('status').textContent = 'Облачный режим';
     }
-  } catch (error) { $('status').textContent = error.message; }
+  } catch (error) {
+    $('status').textContent = provider === 'github' && error.code === 'auth/account-exists-with-different-credential'
+      ? 'Этот email уже зарегистрирован в Firebase. Войдите прежним способом, например через Google, и нажмите «Привязать GitHub».'
+      : error.message;
+  }
+};
+
+$('link-github').onclick = async () => {
+  const current = view;
+  const button = $('link-github');
+  button.disabled = true;
+  try {
+    const linkedUser = await adapter.linkGithub();
+    if (current !== view) return;
+    showUser(linkedUser);
+    $('status').textContent = 'GitHub привязан. Теперь можно входить через GitHub или Google.';
+  } catch (error) {
+    if (current === view) $('status').textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
 };
 
 $('logout').onclick = async () => {
