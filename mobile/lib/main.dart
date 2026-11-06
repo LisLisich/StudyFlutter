@@ -66,9 +66,10 @@ class _StudentsPageState extends State<StudentsPage> {
     'Firebase · без Realtime', 'Firebase · с Realtime',
   ];
   static const providers = {
-    'github': 'GitHub', 'google': 'Google / Gmail', 'apple': 'Apple',
+    'github': 'GitHub', 'google': 'Google / Gmail',
     'yandex': 'Яндекс ID', 'vk': 'VK ID',
   };
+  static const externalProviders = {'yandex', 'vk'};
   final form = GlobalKey<FormState>();
   final name = TextEditingController();
   final major = TextEditingController();
@@ -203,12 +204,12 @@ class _StudentsPageState extends State<StudentsPage> {
       final option = switch (provider) {
         'github' => sb.OAuthProvider.github,
         'google' => sb.OAuthProvider.google,
-        _ => sb.OAuthProvider.apple,
+        _ => throw ArgumentError.value(provider, 'provider'),
       };
       await supabase.auth.signInWithOAuth(option, redirectTo: 'studentslab://auth');
       return;
     }
-    if (provider == 'yandex' || provider == 'vk') {
+    if (externalProviders.contains(provider)) {
       await loginExternal(provider);
     } else if (provider == 'google') {
       await (googleInit ??= GoogleSignIn.instance.initialize(
@@ -219,9 +220,7 @@ class _StudentsPageState extends State<StudentsPage> {
         idToken: user.authentication.idToken,
       ));
     } else {
-      await auth.signInWithProvider(
-        provider == 'github' ? fb.GithubAuthProvider() : fb.AppleAuthProvider(),
-      );
+      await auth.signInWithProvider(fb.GithubAuthProvider());
     }
   }
 
@@ -274,7 +273,8 @@ class _StudentsPageState extends State<StudentsPage> {
         Wrap(spacing: 8, runSpacing: 8, children: [
           for (final entry in providers.entries)
             OutlinedButton(
-              onPressed: busy || (!firebase && ['vk', 'yandex'].contains(entry.key))
+              onPressed: busy || (externalProviders.contains(entry.key) &&
+                  (!firebase || oauthUrl.isEmpty))
                   ? null : () => run(() => login(entry.key)),
               child: Text(entry.value),
             ),

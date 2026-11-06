@@ -44,9 +44,8 @@ li { margin-bottom:8px; overflow-wrap:anywhere }
 <div id="login" class="row">
 <button data-provider="github">GitHub</button>
 <button data-provider="google">Google / Gmail</button>
-<button data-provider="apple">Apple</button>
-<button data-provider="yandex">Яндекс ID</button>
-<button data-provider="vk">VK ID</button>
+<button data-provider="yandex" disabled>Яндекс ID</button>
+<button data-provider="vk" disabled>VK ID</button>
 </div>
 <div id="account" class="row" hidden><strong id="username"></strong><button id="link-github" hidden>Привязать GitHub</button><button id="logout">Выйти</button></div>
 <p id="status" role="status"></p>
@@ -91,7 +90,8 @@ const methods = {
 const query = new URLSearchParams(location.search);
 mode.value = Object.hasOwn(methods, query.get('mode')) ? query.get('mode') : 'supabase-manual';
 demo.checked = query.get('cloud') !== '1';
-const providers = {github:'GitHub', google:'Google', apple:'Apple', yandex:'Яндекс ID', vk:'VK ID'};
+const providers = {github:'GitHub', google:'Google', yandex:'Яндекс ID', vk:'VK ID'};
+const externalProviders = new Set(['yandex','vk']);
 let adapter, user, stopAuth, stopData, version = 0, view = 0, readNumber = 0;
 const cloud = new Map();
 
@@ -190,7 +190,6 @@ async function makeFirebase() {
       const options = {
         github: () => new auth.GithubAuthProvider(),
         google: () => new auth.GoogleAuthProvider(),
-        apple: () => new auth.OAuthProvider('apple.com'),
       };
       await auth.signInWithPopup(session,options[provider]());
     },
@@ -254,11 +253,19 @@ function showUser(next) {
   } else void read();
 }
 
+function updateLoginButtons() {
+  const externalAvailable = mode.value.startsWith('firebase-') && (demo.checked || config.oauthServer);
+  for (const button of $('login').querySelectorAll('button[data-provider]')) {
+    button.disabled = !adapter || (externalProviders.has(button.dataset.provider) && !externalAvailable);
+  }
+}
+
 async function connect() {
   const current = ++version;
   stopAuth?.();
   showUser(null);
   adapter = undefined;
+  updateLoginButtons();
   const service = mode.value.split('-')[0];
   $('method').textContent = methods[mode.value];
   $('status').textContent = 'Подключение…';
@@ -271,6 +278,7 @@ async function connect() {
     const instance = demo.checked ? localAdapter(service) : await cloud.get(service);
     if (current !== version) return;
     adapter = instance;
+    updateLoginButtons();
     const status = $('status');
     status.textContent = demo.checked ? 'Учебные данные этого браузера. Кнопки имитируют вход.' : 'Облачный режим';
     if (!demo.checked && service === 'supabase') {
@@ -318,13 +326,11 @@ async function finishExternal() {
 
 $('login').onclick = async event => {
   const provider = event.target.dataset.provider;
-  if (!provider) return;
+  if (!provider || event.target.disabled || !adapter) return;
   try {
-    if (!demo.checked && ['yandex','vk'].includes(provider)) {
-      if (!mode.value.startsWith('firebase') || !adapter) throw new Error('Для Яндекс ID и VK ID выберите настроенный режим Firebase.');
+    if (!demo.checked && externalProviders.has(provider)) {
       await externalLogin(provider);
     } else {
-      if (!adapter) throw new Error('Сначала настройте подключение к базе.');
       await adapter.login(provider);
       if (adapter?.linkGithub) $('status').textContent = 'Облачный режим';
     }
