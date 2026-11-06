@@ -1,6 +1,6 @@
 import {createServer} from 'node:http';
 import {randomBytes, createHash} from 'node:crypto';
-import {applicationDefault, initializeApp} from 'firebase-admin/app';
+import {applicationDefault, cert, initializeApp} from 'firebase-admin/app';
 import {getAuth} from 'firebase-admin/auth';
 
 const env = process.env;
@@ -9,7 +9,11 @@ const webReturn = new URL(env.WEB_RETURN);
 const vk = env.VK_ORIGIN || 'https://id.vk.ru';
 if (!origin.startsWith('https:') || webReturn.protocol !== 'https:' ||
     !['https://id.vk.ru','https://id.vk.com'].includes(vk)) throw Error('Проверьте HTTPS-адреса в .env');
-const admin = getAuth(initializeApp({credential:applicationDefault()}));
+// A service account key lets Firebase sign custom tokens locally.
+const credential = env.GOOGLE_APPLICATION_CREDENTIALS
+  ? cert(env.GOOGLE_APPLICATION_CREDENTIALS)
+  : applicationDefault();
+const admin = getAuth(initializeApp({credential}));
 const pending = new Map(), tickets = new Map();
 const random = () => randomBytes(32).toString('base64url');
 const sha = value => createHash('sha256').update(value).digest('base64url');
